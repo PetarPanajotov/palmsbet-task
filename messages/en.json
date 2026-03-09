@@ -1,0 +1,22 @@
+{
+  "casino": {
+    "title": "Casino Games",
+    "searchPlaceholder": "Search games or providers...",
+    "allProviders": "All Providers",
+    "play": "Play",
+    "demo": "Demo",
+    "noGames": "No games found",
+    "noGamesDescription": "Try adjusting your search or filters",
+    "loading": "Loading games...",
+    "error": "Error loading games",
+    "retry": "Retry",
+    "provider": "Provider",
+    "gameName": "Game Name",
+    "lines": "Lines",
+    "volatility": "Volatility"
+  },
+  "language": {
+    "en": "EN",
+    "bg": "BG"
+  }
+}
