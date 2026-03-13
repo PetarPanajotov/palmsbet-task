@@ -3,6 +3,10 @@
 A casino game lobby built with Next.js 15 as a frontend interview task. It loads game data from an external CDN, supports search and
 provider filtering, and has support for multiple languages using `next-intl`.
 
+## Live Demo
+
+[https://palmsbet-task.vercel.app/en/](https://palmsbet-task.vercel.app/en/)
+
 ## Overview
 
 This project is a casino game lobby page that includes:
