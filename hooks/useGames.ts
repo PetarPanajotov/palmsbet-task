@@ -12,7 +12,7 @@ const SWR_REVALIDATE_ON_FOCUS = false;
  * @param options - Optional filter criteria (search term, provider code).
  * @returns Object containing filtered games, provider list, loading/error state, and a mutate function for re-fetching.
  */
-export function useGames(options?: FilterOptions) {
+export function useGames({ provider, search }: FilterOptions = {}) {
   const { data, error, isLoading, mutate } = useSWR<GamesResponse>(GAMES_CDN_URL, fetchGames, {
     revalidateOnFocus: SWR_REVALIDATE_ON_FOCUS,
     dedupingInterval: SWR_DEDUPING_INTERVAL_MS,
@@ -20,15 +20,14 @@ export function useGames(options?: FilterOptions) {
 
   const filteredGames = useMemo(() => {
     const games = data?.games ?? [];
-    const filteredByProvider = filterGamesByProvider(games, options?.provider);
-    return filterGamesBySearch(filteredByProvider, options?.search);
-  }, [data?.games, options?.provider, options?.search]);
+    return filterGamesBySearch(filterGamesByProvider(games, provider), search);
+  }, [data?.games, provider, search]);
 
   return {
     games: filteredGames,
     providers: data?.providers ?? [],
     isLoading,
-    error,
+    error: error as Error | undefined,
     mutate,
   };
 }
@@ -37,11 +36,12 @@ export function useGames(options?: FilterOptions) {
  * Fetches games from the PalmsBet CDN, maps them to the app's `Game` format,
  * and returns the normalized game list with unique providers.
  *
+ * @param url - The CDN URL to fetch games from.
  * @returns A promise resolving to the mapped games and provider list.
- * @throws {Error} If the request fails.
+ * @throws {Error} If the request fails or the response shape is invalid.
  */
-async function fetchGames(): Promise<GamesResponse> {
-  const response = await fetch(GAMES_CDN_URL);
+async function fetchGames(url: string): Promise<GamesResponse> {
+  const response = await fetch(url);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch games: ${response.status} ${response.statusText}`);
@@ -49,18 +49,32 @@ async function fetchGames(): Promise<GamesResponse> {
 
   const json: ExternalGamesResponse = await response.json();
 
-  const games: Game[] = Object.values(json.game_list).map((game) => ({
-    id: Number(game.id),
+  // Runtime guard to prevent the CDN from returning invalid json.
+  if (!json?.game_list || typeof json.game_list !== "object") {
+    throw new Error("Invalid response shape: missing game_list");
+  }
+
+  const games = Object.values(json.game_list).map(mapExternalGame);
+  const providers = [...new Set(games.map((game) => game.provider))].sort((a, b) => a.localeCompare(b));
+
+  return { games, providers };
+}
+
+/**
+ * Maps a raw external game object to the app's internal Game format.
+ *
+ * @param game - The raw game object from the CDN response.
+ * @returns The mapped Game object.
+ */
+function mapExternalGame(game: ExternalGamesResponse["game_list"][string]): Game {
+  return {
+    id: game.id,
     name: game.name,
     provider: game.vendor_code,
     image: transformGameImage(game.active_image),
     lines: game.lines,
     volatility: game.volatility,
-  }));
-
-  const providers = [...new Set(games.map((game) => game.provider))].sort((a, b) => a.localeCompare(b));
-
-  return { games, providers };
+  };
 }
 
 /**
@@ -102,7 +116,8 @@ function filterGamesBySearch(games: Game[], search?: string): Game[] {
 /**
  * Transforms the raw image path from the API into a valid, working URL.
  * Handles legacy path replacement and domain prefixing.
- * @param rawPath The image raw url path
+ *
+ * @param rawPath The image raw url path.
  * @returns The transformed image to correct url path.
  */
 function transformGameImage(rawPath: string | undefined | null): string {

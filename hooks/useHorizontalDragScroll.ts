@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface UseHorizontalDragScrollOptions {
   itemCount: number;
@@ -26,51 +26,60 @@ export function useHorizontalDragScroll({
   const startXRef = useRef(0);
   const scrollLeftRef = useRef(0);
 
-  const updateScrollButtons = () => {
+  const updateScrollButtons = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
 
     setCanScrollLeft(el.scrollLeft > 4);
     setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
-  };
+  }, []);
 
+  /**
+   * Keeps the arrow button visibility in sync with the scroll position.
+   *
+   * Runs when:
+   * - the component mounts (so arrows are correct from the start)
+   * - itemCount changes (new items = different scroll width)
+   * - the user scrolls (left/right arrow might need to appear or disappear)
+   * - the window resizes (container width chhanged, overflow might be different now)
+   */
   useEffect(() => {
     updateScrollButtons();
 
     const el = scrollRef.current;
     if (!el) return;
 
-    const handleScroll = () => updateScrollButtons();
-
-    el.addEventListener("scroll", handleScroll);
+    el.addEventListener("scroll", updateScrollButtons);
     window.addEventListener("resize", updateScrollButtons);
 
     return () => {
-      el.removeEventListener("scroll", handleScroll);
+      el.removeEventListener("scroll", updateScrollButtons);
       window.removeEventListener("resize", updateScrollButtons);
     };
-  }, [itemCount]);
+  }, [itemCount, updateScrollButtons]);
 
   /**
-   * Scroll the container based by a calculated amount.
-   * The distance is based on a ratio of the visible container width,
-   * but never smaller than the configured minimum step.
-   *
-   * @param direction - Direction to scroll toward.
+   * Scrolls the container left or right by a calculated amount.
+   * The distance is based on the visible container width times scrollStepRatio,
+   * but never less than minScrollStep px.
+   * @param direction - The direction to scroll (left or right)
    */
-  const scrollByAmount = (direction: "left" | "right") => {
-    const el = scrollRef.current;
-    if (!el) return;
+  const scrollByAmount = useCallback(
+    (direction: "left" | "right") => {
+      const el = scrollRef.current;
+      if (!el) return;
 
-    const amount = Math.max(el.clientWidth * scrollStepRatio, minScrollStep);
+      const amount = Math.max(el.clientWidth * scrollStepRatio, minScrollStep);
 
-    el.scrollBy({
-      left: direction === "left" ? -amount : amount,
-      behavior: "smooth",
-    });
-  };
+      el.scrollBy({
+        left: direction === "left" ? -amount : amount,
+        behavior: "smooth",
+      });
+    },
+    [scrollStepRatio, minScrollStep]
+  );
 
-  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+  const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     const el = scrollRef.current;
     if (!el) return;
 
@@ -78,32 +87,58 @@ export function useHorizontalDragScroll({
     movedRef.current = false;
     startXRef.current = e.pageX;
     scrollLeftRef.current = el.scrollLeft;
-    setIsDragging(true);
-  };
 
-  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const el = scrollRef.current;
-    if (!el || !isDraggingRef.current) return;
-
-    const dx = e.pageX - startXRef.current;
-
-    if (Math.abs(dx) > dragThreshold) {
-      movedRef.current = true;
+    // If the pointer went down on a child button (e.g. a filter pill), dont capture yet —
+    // we want the button to still receive its click event if the user doesnt drag.
+    // If they do drag past the threshold, we capture lazily in onPointerMove.
+    if (!(e.target as HTMLElement).closest("button")) {
+      el.setPointerCapture(e.pointerId);
     }
+  }, []);
 
-    el.scrollLeft = scrollLeftRef.current - dx;
-  };
+  const onPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const el = scrollRef.current;
+      if (!el || !isDraggingRef.current) return;
 
-  const stopDragging = () => {
+      const dx = e.pageX - startXRef.current;
+
+      if (Math.abs(dx) > dragThreshold) {
+        movedRef.current = true;
+
+        setIsDragging((prev) => {
+          if (prev) return prev;
+          return true;
+        });
+
+        // Lazily capture the pointer once we're sure its a drag.
+        // This lets the drag continue outside the container without losing the gesture.
+        if (!el.hasPointerCapture(e.pointerId)) {
+          el.setPointerCapture(e.pointerId);
+        }
+      }
+
+      el.scrollLeft = scrollLeftRef.current - dx;
+    },
+    [dragThreshold]
+  );
+
+  const stopDragging = useCallback(() => {
     isDraggingRef.current = false;
     setIsDragging(false);
+  }, []);
 
-    window.setTimeout(() => {
-      movedRef.current = false;
-    }, 0);
-  };
+  const shouldCancelClick = useCallback(() => movedRef.current, []);
 
-  const shouldCancelClick = () => movedRef.current;
+  const containerProps = useMemo(
+    () => ({
+      onPointerDown,
+      onPointerMove,
+      onPointerUp: stopDragging,
+      onPointerCancel: stopDragging,
+    }),
+    [onPointerDown, onPointerMove, stopDragging]
+  );
 
   return {
     scrollRef,
@@ -112,11 +147,6 @@ export function useHorizontalDragScroll({
     isDragging,
     scrollByAmount,
     shouldCancelClick,
-    containerProps: {
-      onMouseDown,
-      onMouseMove,
-      onMouseUp: stopDragging,
-      onMouseLeave: stopDragging,
-    },
+    containerProps,
   };
 }

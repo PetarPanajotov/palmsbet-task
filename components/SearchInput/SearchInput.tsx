@@ -29,30 +29,14 @@ export function SearchInput({ value, onChange, debounceMs = 300, className }: Se
     [onChange, debounceMs]
   );
 
-  /**
-   * Updates the local input state immediately for responsive typing,
-   * while propagating the value to the parent through a debounced callback.
-   */
   const handleInputChange = (nextValue: string) => {
     setInputValue(nextValue);
 
     const trimmedValue = nextValue.trim();
 
-    if (trimmedValue.length === 0) {
-      onChange("");
-      return;
-    }
-
-    if (trimmedValue.length < 2) {
-      return;
-    }
-
     debouncedOnChange(trimmedValue);
   };
 
-  /**
-   * Clears the input and immediately notifies the parent.
-   */
   const handleClear = () => {
     setInputValue("");
     onChange("");
@@ -71,7 +55,7 @@ export function SearchInput({ value, onChange, debounceMs = 300, className }: Se
         className={cn(
           "w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pr-10 pl-10 text-sm text-white placeholder:text-zinc-500",
           "transition-colors outline-none",
-          "focus:border-sky-400/60 focus:bg-white/10",
+          "focus:bg-white/10 focus:ring-2 focus:ring-sky-400/60",
           "[&::-webkit-search-cancel-button]:appearance-none"
         )}
       />
@@ -80,7 +64,11 @@ export function SearchInput({ value, onChange, debounceMs = 300, className }: Se
         <button
           type="button"
           onClick={handleClear}
-          className="absolute top-1/2 right-3 flex h-5 w-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-zinc-400 transition hover:bg-white/10 hover:text-white"
+          className={cn(
+            "absolute top-1/2 right-3 -translate-y-1/2",
+            "flex h-5 w-5 cursor-pointer items-center justify-center rounded-full",
+            "text-zinc-400 transition hover:bg-white/10 hover:text-white"
+          )}
           aria-label="Clear search"
         >
           <X className="h-4 w-4" />

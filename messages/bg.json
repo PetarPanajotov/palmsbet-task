@@ -13,7 +13,10 @@
     "provider": "Доставчик",
     "gameName": "Име на Игра",
     "lines": "Линии",
-    "volatility": "Волатилност"
+    "volatility": "Волатилност",
+    "scrollToTop": "Скролирай нагоре",
+    "unexpectedError": "Възникна неочаквана грешка при зареждането на страницата.",
+    "resetFilters": "Нулирай филтрите"
   },
   "language": {
     "en": "ЕН",

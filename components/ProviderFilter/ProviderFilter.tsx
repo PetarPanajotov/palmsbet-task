@@ -11,6 +11,12 @@ interface ProviderFilterProps {
   className?: string;
 }
 
+const SCROLL_BUTTON_CLASS = cn(
+  "absolute top-1/2 z-10 -translate-y-1/2 cursor-pointer rounded-full",
+  "border border-white/10 bg-black/70 p-2 text-white",
+  "backdrop-blur-sm transition hover:bg-black/85"
+);
+
 export function ProviderFilter({ providers, selectedProvider, onChange, className }: ProviderFilterProps) {
   const { scrollRef, canScrollLeft, canScrollRight, isDragging, scrollByAmount, shouldCancelClick, containerProps } =
     useHorizontalDragScroll({
@@ -27,8 +33,8 @@ export function ProviderFilter({ providers, selectedProvider, onChange, classNam
         <button
           type="button"
           onClick={() => scrollByAmount("left")}
-          className="absolute top-1/2 left-0 z-10 -translate-y-1/2 rounded-full border border-white/10 bg-black/70 p-2 text-white backdrop-blur-sm transition hover:bg-black/85"
           aria-label="Scroll providers left"
+          className={cn(SCROLL_BUTTON_CLASS, "left-0")}
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -38,8 +44,8 @@ export function ProviderFilter({ providers, selectedProvider, onChange, classNam
         <button
           type="button"
           onClick={() => scrollByAmount("right")}
-          className="absolute top-1/2 right-0 z-10 -translate-y-1/2 rounded-full border border-white/10 bg-black/70 p-2 text-white backdrop-blur-sm transition hover:bg-black/85"
           aria-label="Scroll providers right"
+          className={cn(SCROLL_BUTTON_CLASS, "right-0")}
         >
           <ChevronRight className="h-4 w-4" />
         </button>
@@ -47,7 +53,10 @@ export function ProviderFilter({ providers, selectedProvider, onChange, classNam
 
       <div
         ref={scrollRef}
-        className="flex gap-2 overflow-x-auto pt-1 pb-1 select-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className={cn(
+          "flex gap-2 overflow-x-auto pt-1 pb-1 select-none",
+          "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        )}
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
         {...containerProps}
       >
@@ -58,13 +67,13 @@ export function ProviderFilter({ providers, selectedProvider, onChange, classNam
             <button
               key={provider}
               type="button"
+              aria-pressed={isSelected}
               onClick={(e) => {
                 if (shouldCancelClick()) {
                   e.preventDefault();
                   e.stopPropagation();
                   return;
                 }
-
                 handleProviderClick(provider);
               }}
               className={cn(
@@ -73,7 +82,6 @@ export function ProviderFilter({ providers, selectedProvider, onChange, classNam
                   ? "border-sky-400 bg-sky-400 text-white"
                   : "border-white/10 bg-white/5 text-zinc-300 hover:border-white/20 hover:bg-white/10 hover:text-white"
               )}
-              aria-pressed={isSelected}
             >
               {provider}
             </button>

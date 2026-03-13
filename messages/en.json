@@ -13,7 +13,10 @@
     "provider": "Provider",
     "gameName": "Game Name",
     "lines": "Lines",
-    "volatility": "Volatility"
+    "volatility": "Volatility",
+    "scrollToTop": "Scroll To Top",
+    "unexpectedError": "An unexpected error occurred while loading the casino page.",
+    "resetFilters": "Reset filters"
   },
   "language": {
     "en": "EN",
