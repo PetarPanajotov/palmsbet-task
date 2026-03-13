@@ -98,6 +98,7 @@ Tailwind utilities since the Figma breakpoints were meant as guidelines, not str
 - loads games from the CDN
 - uses SWR for caching
 - maps the API response to the internal `Game` shape
+- normalizes image URLs based on the image path clarification provided by email
 - supports filtering by provider and search term
 - returns loading and error states
 - exposes `mutate()` for retry
