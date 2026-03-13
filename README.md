@@ -1,15 +1,39 @@
-# Casino Interview Template
+# Casino Interview Task
 
-A Next.js 15 template project for frontend developer interviews focused on building a casino game lobby.
+A casino game lobby built with Next.js 15 as a frontend interview task. It loads game data from an external CDN, supports search and
+provider filtering, and has support for multiple languages using `next-intl`.
 
-## Project Overview
+## Overview
 
-This is a starter template for a casino game lobby interview task. Candidates will build a functional game listing page with search and
-filtering functionality.
+This project is a casino game lobby page that includes:
+
+- loading games from an external source
+- filtering by provider
+- search with debounce and URL sync
+- responsive game grid
+- loading, empty, and error states
+- reusable game cards
+- loading more games as you scroll
+- English and Bulgarian translations
+- unit tests for hooks
+- error boundary
+- Framer Motion animations
+
+## Tech Stack
+
+- Next.js 15 App Router
+- TypeScript
+- SWR
+- Tailwind CSS
+- next-intl
+- Vitest
+- React Testing Library
+- Framer Motion
+- Lucide Icons
 
 ## Getting Started
 
-### Prerequisites
+### Requirements
 
 - Node.js 18+
 - npm 9+
@@ -17,213 +41,249 @@ filtering functionality.
 ### Installation
 
 ```bash
-# Clone or fork this repository
-git clone <repository-url>
-cd casino-interview-template
-
-# Install dependencies
+git clone https://github.com/PetarPanajotov/palmsbet-task.git
+cd palmsbet-task
 npm install
-
-# Run development server
 npm run dev
-
-# Open http://localhost:3000/en/
 ```
 
-## Interview Task
+Open the app at `http://localhost:3000/en/`.
 
-### Objective
+## Design Notes
 
-Build a fully functional casino game lobby page with the following features.
+Figma was used as a reference for layout and design. The final result follows the design closely, but some breakpoints were adjusted using
+Tailwind utilities since the Figma breakpoints were meant as guidelines, not strict rules.
 
----
+## What Was Built
 
-## Design
+### Core Requirements
 
-**Figma:** [Design File](https://www.figma.com/design/ouEOtlfXEf3e2r5LG4NfSW/TASK?node-id=0-1&p=f&t=f5Qhflgq2OOUoG2Q-0)
+- ✅ Load games from external CDN
+- ✅ Filter by provider and search term
+- ✅ SWR caching and revalidation
+- ✅ External API response mapped to internal `Game` interface
+- ✅ Loading and error states
+- ✅ Responsive page layout
+- ✅ Empty state when no results found
+- ✅ Retry button on fetch error
+- ✅ `next-intl` integration
+- ✅ Reusable `GameCard` component
+- ✅ Lazy-loaded images
 
-> **Note:** The design is for reference only.
+### Extra Features
 
----
+- ✅ Provider filter with horizontal scroll
+- ✅ Debounced search input
+- ✅ Search term saved in URL
+- ✅ Load more games as you scroll
+- ✅ Unit tests for hooks
+- ✅ Framer Motion animations
+- ✅ Error boundary
+- ✅ Scroll-to-top button _(added on own initiative)_
 
-## Task Requirements
+### Not Built
 
-### 1. Custom Hooks
+- ❌ Virtualized list with `react-window` — replaced with incremental loading, which fits better with the page scroll design.
 
-#### `hooks/useGames.ts`
+## Features in Detail
 
-- Fetch games from external CDN
-- Support filtering by provider and search term
-- Use SWR for caching and revalidation
-- Transform external API response to app's Game interface
-- Return loading and error states
+### 1. Games Data Hook
 
-### 2. Main Casino Page
+**File:** `hooks/useGames.ts`
+
+- loads games from the CDN
+- uses SWR for caching
+- maps the API response to the internal `Game` shape
+- supports filtering by provider and search term
+- returns loading and error states
+- exposes `mutate()` for retry
+
+**Data source:** `https://cdn.palmsbet.com/static/games_bg.json`
+
+### 2. Main Page
 
 **File:** `app/[locale]/page.tsx`
 
-Implement the casino page that:
+- shows loading skeletons while data loads
+- shows empty state when no games match the filters
+- shows a reset button when there are no results
+- shows a retry button on error
+- renders a responsive game grid
+- loads more games as the user scrolls
+- has a scroll-to-top button
+- uses `next-intl` for translations
 
-- Uses all components above
-- Shows loading state while fetching
-- Shows empty state when no games match
-- Handles errors gracefully with retry button
-- Implements a responsive games grid (refer to Figma for layout and breakpoints)
-- Integrates with next-intl for translations
-
-### 3. Game Card Component
+### 3. Game Card
 
 **File:** `components/GameCard/GameCard.tsx`
 
-Implement a reusable `GameCard` component that:
+- shows game image
+- shows details as name, provider, lines, volatility, buttons `Play` & `Demo` _(on hover)_
+- lazy loads images
+- shows a fallback if the image fails to load
+- has entrance and hover animations via Framer Motion
 
-- Displays game image and name
-- Shows game info: lines and volatility
-- Shows "Play" and "Demo" buttons (buttons are non-functional)
-- Add lazy loading for game images
+### 4. Provider Filter
 
----
+**File:** `components/ProviderFilter/ProviderFilter.tsx`
 
-## Data Source
+- scrollable list of provider chips
+- click to select or deselect a provider
+- drag to scroll
+- shows or hides arrows based on scroll position
+- has a loading skeleton state
 
-Games are fetched from: `https://cdn.palmsbet.com/static/games_bg.json`
+### 5. Search Input
 
-### Game Data Structure
+**File:** `components/SearchInput/SearchInput.tsx`
 
-Each game from the API contains the following fields:
+- has a search icon and a clear button
+- input is debounced
+- value is synced with the URL
 
-| Field        | Type   | Description                                      |
-| ------------ | ------ | ------------------------------------------------ |
-| `id`         | number | Unique game identifier                           |
-| `name`       | string | Game display name                                |
-| `provider`   | string | Game provider/vendor code (e.g., "CTRGSECASINO") |
-| `image`      | string | Full URL to game image                           |
-| `lines`      | string | Number of paylines (e.g., "50", "20", "100")     |
-| `volatility` | string | Game volatility level                            |
+### 6. URL Search Param Hook
 
----
+**File:** `hooks/useSearchQueryParam.ts`
 
-## Technical Requirements
+- reads the current value from the URL
+- updates the URL without reloading the page
+- trims whitespace before saving
+- removes the param when the value is empty
+- keeps other params unchanged
 
-### Must Use:
+### 7. Incremental Pagination
 
-- ✅ Next.js 15 App Router
-- ✅ TypeScript (strict mode enabled)
-- ✅ SWR for data fetching
-- ✅ Tailwind CSS for styling
-- ✅ next-intl for translations
+**File:** `hooks/usePaginatedGames.ts`
 
-### Code Quality Expectations:
+- loads games in small batches
+- uses intersecton observer to detect when to load more
+- resets when filters change
+- uses transitionm to keep the UI smooth
 
-- Proper TypeScript interfaces/types throughout
-- Component composition over inheritance
-- Custom hooks for reusable logic
-- Error boundaries (optional but bonus)
-- Loading states and skeletons (optional but bonus)
-- Responsive design
-- Clean, readable code with consistent style
+### 8. Scroll To Top
 
-### Performance Considerations:
+**File:** `hooks/useScrollToTop.ts`
 
-- Memoization with useMemo/useCallback where beneficial
-- Debounced search input
-- Image optimization with Next.js Image
-- Efficient re-renders
+- shows a button after the user scrolls down
+- clicking it scrolls smoothly back to the top
 
----
+### 9. Error Boundary
 
-## Project Structure
+**File:** `app/[locale]/error.tsx`
 
-```
-casino-interview-template/
-├── app/
-│   ├── [locale]/
-│   │   ├── page.tsx              # TODO: Main casino page
-│   │   └── layout.tsx            # i18n layout
-│   ├── layout.tsx                # Root layout
-│   └── globals.css               # Global styles
-│   └── page.tsx                  # Root page (redirects to default locale)
-├── components/
-│   ├── GameCard/
-│   │   ├── GameCard.tsx          # TODO: Game card
-│   │   └── index.ts
-│   ├── ProviderFilter/
-│   │   ├── ProviderFilter.tsx    # BONUS: Provider filter
-│   │   └── index.ts
-│   ├── SearchInput/
-│   │   ├── SearchInput.tsx       # BONUS: Search input
-│   │   └── index.ts
-│   └── LanguageSwitcher/
-│       ├── LanguageSwitcher.tsx  # Language switcher
-│       └── index.ts
-├── hooks/
-│   └── useGames.ts               # Games data hook
-├── lib/
-│   └── utils.ts                  # Utility functions
-├── types/
-│   └── game.ts                   # TypeScript types
-├── messages/
-│   ├── en.json                   # English translations
-│   └── bg.json                   # Bulgarian translations
-├── i18n/
-│   ├── request.ts                # i18n request config
-│   └── routing.ts                # i18n routing config
-└── README.md                     # This file
-```
+- catches unexpected errors during rendering
+- separate from API error handling
+- has a retry button
 
----
+## Performance
 
-## Bonus Points (Optional)
+Some steps were taken to keep the app fast:
 
-- ✅ Provider Filter Component (`components/ProviderFilter/ProviderFilter.tsx`) — horizontal scrollable chips, single-select toggle
-- ✅ Search Input Component (`components/SearchInput/SearchInput.tsx`) — search icon, debounced input (300ms), clear button
-- ✅ Pagination for the game grid
-- ✅ Unit tests for hooks (React Testing Library)
-- ✅ Virtualized list for large datasets (react-window)
-- ✅ Advanced animations (Framer Motion)
-- ✅ Error boundary implementation
-- ✅ URL search params persistence
+- `useMemo` and `useCallback` where useful
+- `GameCard` is memoized _(Based on tests, improved the performance by a lot)_
+- search input is debounced
+- SWR handles caching
+- images are lazy loaded with `next/image`
+- games are loaded in batches instead of all at once
+- hooks use stable references to avoid extra re-renders
 
----
+### Why No Virtualization
 
-## Tips for Candidates
+`react-window` was not used because the page uses the main document scroll. Adding a separate scroll container would break the layout and
+feel wrong. Incremental loading was a better fit in my opinion.
 
-1. **Start with data fetching** - Get games loading first
-2. **Build one component at a time** - Don't try to do everything at once
-3. **Test as you go** - Check browser frequently
-4. **Prioritize requirements** - Focus on core functionality first
-5. **Use TypeScript** - Proper types show attention to detail
-6. **Don't over-engineer** - Simple, working code is better than complex incomplete code
-7. **Ask questions** - If something is unclear, ask!
+## Tests
 
----
+Unit tests were written with **Vitest** and **React Testing Library**.
 
-## Common Pitfalls to Avoid
+### `useGames`
 
-❌ Not handling loading states  
-❌ Missing error handling  
-❌ Not using TypeScript properly (using `any`)  
-❌ Over-fetching data (not using SWR caching)  
-❌ Not debouncing search input  
-❌ Non-responsive design  
-❌ Over-complicating simple features
+- loading state
+- successful fetch and mapping
+- filtering by provider and search
+- error handling
+- image URL transfformation
+- mutate/revalidation
 
----
+### `useSearchQueryParam`
+
+- reading params from the URL
+- setting, updating, and removing params
+- trimming whitespace
+- keeping unrelated params
+- scroll behavior
+
+## Translations
+
+The app supports two languages using `next-intl`:
+
+- English — `messages/en.json`
+- Bulgarian — `messages/bg.json`
 
 ## Available Scripts
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm start` - Start production server
-- `npm run lint` - Run ESLint
-- `npm run type-check` - Run TypeScript compiler
-- `npm run format` - Auto-format all files with Prettier
-- `npm run format:check` - Check formatting (CI-friendly)
+- `dev` — start development server
+- `build` — build for production
+- `start` — start production server
+- `lint` — run ESLint
+- `type-check` — run TypeScript compiler
+- `format` — format with Prettier
+- `format:check` — check formatting
+- `test` — run Vitest
+- `test:watch` — run Vitest in watch mode
+- `test:run` — run tests once
 
----
+## Project Structure
 
-## Questions?
+```txt
+casino-interview-template/
+├── app/
+│   ├── [locale]/
+│   │   ├── page.tsx
+│   │   ├── layout.tsx
+│   │   └── error.tsx
+│   ├── layout.tsx
+│   ├── page.tsx
+│   └── globals.css
+├── components/
+│   ├── GameCard/
+│   │   ├── GameCard.tsx
+│   │   ├── GameCardSkeleton.tsx
+│   │   └── index.ts
+│   ├── ProviderFilter/
+│   │   ├── ProviderFilter.tsx
+│   │   ├── ProviderFilterSkeleton.tsx
+│   │   └── index.ts
+│   ├── SearchInput/
+│   │   ├── SearchInput.tsx
+│   │   └── index.ts
+│   └── LanguageSwitcher/
+│       ├── LanguageSwitcher.tsx
+│       └── index.ts
+├── hooks/
+│   ├── useGames.ts
+│   ├── useGames.test.ts
+│   ├── useHorizontalDragScroll.ts
+│   ├── usePaginatedGames.ts
+│   ├── useScrollToTop.ts
+│   ├── useSearchQueryParam.test.ts
+│   └── useSearchQueryParam.ts
+├── lib/
+│   └── utils.ts
+├── types/
+│   └── game.ts
+├── messages/
+│   ├── en.json
+│   └── bg.json
+├── i18n/
+│   ├── request.ts
+│   └── routing.ts
+└── README.md
+```
 
-If you have questions during the interview, don't hesitate to ask!
+## Notes
 
-Good luck! 🎰
+The goal was to write clean, simple code that works well and is easy to read.
+
+Some components like `GameCard` and `app/[locale]/page.tsx` could be split into smaller pieces. However, since the task scope is limited and
+the goal was to keep things simple, it made more sense to keep related logic together in one place.
