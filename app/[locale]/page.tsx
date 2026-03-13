@@ -1,46 +1,86 @@
 "use client";
 
-import { useState, Suspense } from "react";
-import { useTranslations } from "next-intl";
-import { useGames } from "@/hooks/useGames";
-import { GameCard } from "@/components/GameCard";
-import { ProviderFilter } from "@/components/ProviderFilter";
-import { SearchInput } from "@/components/SearchInput";
+import { GameCard, GameCardSkeleton } from "@/components/GameCard";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-
-// TODO: Implement Casino Page
-// This page should:
-// 1. Fetch games using useGames hook
-// 2. Show loading state while fetching
-// 3. Show empty state when no games match filters
-// 4. Handle errors gracefully with retry button
-// 5. Be fully responsive
+import { ProviderFilter, ProviderFilterSkeleton } from "@/components/ProviderFilter";
+import { SearchInput } from "@/components/SearchInput";
+import { useGames, useSearchQueryParam } from "@/hooks";
+import { cn } from "@/lib/utils";
+import { ChevronUp } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Suspense, startTransition, useEffect, useRef, useState } from "react";
 
 function CasinoContent() {
   const t = useTranslations("casino");
 
-  // TODO: Implement filter state
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useSearchQueryParam("search");
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
-  // TODO: Fetch games with filters
-  // Pass both search and provider to useGames: { search: searchTerm, provider: selectedProvider }
-  const { games, providers, isLoading, error, mutate } = useGames({ search: searchTerm, provider: selectedProvider ?? undefined });
+  const { games, providers, isLoading, error, mutate } = useGames({
+    search: searchTerm,
+    provider: selectedProvider ?? undefined,
+  });
 
-  // TODO: Filter games by selected provider
   const filteredGames = games;
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const [visibleCount, setVisibleCount] = useState(20);
 
-  // TODO: Show loading state
-  // TIP: Use <GameCardSkeleton /> from "@/components/GameCard" to render skeleton placeholders in a grid
-  if (isLoading) {
-    return (
-      <div className="py-12 text-center">
-        <p className="text-gray-400">{t("loading")}</p>
-      </div>
+  const pageSize = 40;
+
+  useEffect(() => {
+    setVisibleCount(pageSize);
+  }, [pageSize, searchTerm, selectedProvider, filteredGames.length]);
+
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el || isLoading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+
+        if (first?.isIntersecting) {
+          startTransition(() => {
+            setVisibleCount((prev) => {
+              if (prev >= filteredGames.length) return prev;
+              return Math.min(prev + pageSize, filteredGames.length);
+            });
+          });
+        }
+      },
+      {
+        root: null,
+        rootMargin: "1200px 0px",
+        threshold: 0,
+      }
     );
-  }
 
-  // TODO: Show error state
+    observer.observe(el);
+
+    return () => observer.disconnect();
+  }, [filteredGames.length, pageSize, isLoading]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 500);
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const handleScrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+  const visibleGames = filteredGames.slice(0, visibleCount);
+
   if (error) {
     return (
       <div className="py-12 text-center">
@@ -54,44 +94,65 @@ function CasinoContent() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <h1 className="text-3xl font-bold text-white">{t("title")}</h1>
         <LanguageSwitcher />
       </div>
 
-      {/* Search */}
       <div className="w-full md:w-96">
         <SearchInput value={searchTerm} onChange={setSearchTerm} />
       </div>
 
-      {/* Provider Filter */}
-      <ProviderFilter providers={providers} selectedProvider={selectedProvider} onChange={setSelectedProvider} />
+      {isLoading ? (
+        <ProviderFilterSkeleton />
+      ) : (
+        <ProviderFilter providers={providers} selectedProvider={selectedProvider} onChange={setSelectedProvider} />
+      )}
 
-      {/* Games Grid */}
-      {filteredGames.length === 0 ? (
+      {!isLoading && filteredGames.length === 0 ? (
         <div className="py-12 text-center">
           <p className="text-xl text-gray-400">{t("noGames")}</p>
           <p className="text-gray-500">{t("noGamesDescription")}</p>
         </div>
       ) : (
-        // TODO: Implement responsive games grid
-        // - Refer to the Figma file for the grid layout and breakpoints
-        // - First card should be visually featured/larger
-        <div>
-          {filteredGames.map((game) => (
-            <GameCard key={game.id} game={game} />
-          ))}
-        </div>
+        <>
+          <div className="3xl:grid-cols-6 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+            {isLoading
+              ? Array.from({ length: pageSize }).map((_, index) => (
+                  <div key={index} className={index === 0 ? "col-span-2 row-span-2" : "col-span-1"}>
+                    <GameCardSkeleton />
+                  </div>
+                ))
+              : visibleGames.map((game, index) => (
+                  <div key={game.id} className={index === 0 ? "col-span-2 row-span-2" : "col-span-1"}>
+                    <GameCard game={game} />
+                  </div>
+                ))}
+          </div>
+
+          {!isLoading && visibleCount < filteredGames.length && <div ref={loadMoreRef} className="h-10 w-full" />}
+        </>
       )}
+
+      <button
+        type="button"
+        onClick={handleScrollToTop}
+        aria-label="Scroll to top"
+        className={cn(
+          "fixed right-4 bottom-4 z-50 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-black/70 text-white shadow-lg backdrop-blur-sm transition-all duration-300 hover:bg-black/85 md:right-6 md:bottom-6",
+          showScrollTop ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0"
+        )}
+      >
+        <ChevronUp className="h-5 w-5" />
+      </button>
     </div>
   );
 }
 
 export default function CasinoPage() {
   return (
-    <main className="min-h-screen p-4 md:p-8">
-      <div className="mx-auto max-w-7xl">
+    <main className="min-h-screen p-2 sm:p-4 md:p-8">
+      <div className="mx-auto">
         <Suspense
           fallback={
             <div className="py-12 text-center">
