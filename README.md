@@ -234,8 +234,6 @@ The app supports two languages using `next-intl`:
 - `format` — format with Prettier
 - `format:check` — check formatting
 - `test` — run Vitest
-- `test:watch` — run Vitest in watch mode
-- `test:run` — run tests once
 
 ## Project Structure
 
