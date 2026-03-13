@@ -185,7 +185,6 @@ Some steps were taken to keep the app fast:
 - SWR handles caching
 - images are lazy loaded with `next/image`
 - games are loaded in batches instead of all at once
-- hooks use stable references to avoid extra re-renders
 
 ### Why No Virtualization
 
